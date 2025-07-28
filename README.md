@@ -1,7 +1,11 @@
 # Interactive Learning Roadmap
 
 This project is a practical implementation designed to showcase how to build interactive and useful dashboards for tracking learning progress using Vue.js and TailwindCSS. It can be used as a template or inspiration for similar productivity tools.
+## Live Preview
 
+🔗 [مشاهده دمو پروژه](https://interactive-learning-roadmap-4bnyejbpk.vercel.app/)
+
+🔗 [Demo](https://interactive-learning-roadmap-4bnyejbpk.vercel.app/)
 ## ✨ Features
 
 - Track your progress for each roadmap item
