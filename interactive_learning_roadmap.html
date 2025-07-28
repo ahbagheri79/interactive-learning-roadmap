@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dev Roadmap Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+  <div id="app" class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white shadow-md border-r flex flex-col justify-between">
+      <div class="p-6">
+        <h2 class="text-2xl font-bold text-blue-600 mb-4">📘 My Assistant</h2>
+        <nav class="flex flex-col gap-2">
+          <button class="text-left px-4 py-2 bg-blue-100 text-blue-800 rounded">Dashboard</button>
+          <button @click="saveData" class="text-left px-4 py-2 hover:bg-blue-100 rounded">💾 Export JSON</button>
+          <label class="cursor-pointer px-4 py-2 hover:bg-blue-100 rounded">
+            📥 Import JSON
+            <input type="file" @change="loadData($event)" class="hidden" />
+          </label>
+        </nav>
+      </div>
+      <div class="p-4 text-xs text-gray-500">© 2025 Dev Assistant</div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden">
+      <!-- Learning Grid -->
+      <section class="flex-1 overflow-y-auto p-8">
+        <div class="flex justify-between items-center mb-6">
+          <h1 class="text-3xl font-bold">Learning Roadmap</h1>
+          <span class="text-gray-500">Overall Progress: <strong class="text-blue-600">{{ totalProgress.toFixed(1) }}%</strong></span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div v-for="item in filteredRoadmap" :key="item.name" class="bg-white rounded-xl shadow p-5 border border-gray-200">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="text-lg font-semibold">{{ item.name }}</h2>
+              <span v-if="item.deadline" class="text-xs text-gray-500">
+                Due: <span :class="{'text-green-600': !isOverdue(item), 'text-red-500': isOverdue(item) && item.status !== 'Completed'}">{{ formatDate(item.deadline) }}</span>
+              </span>
+            </div>
+
+            <div class="mb-3">
+              <label class="block text-sm font-medium text-gray-600 mb-1">Progress: {{ item.progress }}%</label>
+              <input type="range" min="0" max="100" step="5" v-model.number="item.progress" class="w-full accent-blue-600">
+              <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                <div class="h-2 bg-blue-500 rounded-full" :style="{ width: item.progress + '%' }"></div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-600">Status:</label>
+              <select v-model="item.status" class="mt-1 px-2 py-1 border rounded text-sm w-full">
+                <option>Not Started</option>
+                <option>In Progress</option>
+                <option>Completed</option>
+              </select>
+            </div>
+
+            <div v-if="item.status === 'Completed' && isOverdue(item)" class="text-red-500 text-xs mt-1">⚠️ Completed late</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Level Tracker -->
+      <aside class="w-72 bg-white border-l shadow-inner p-6 hidden md:block">
+        <h2 class="text-xl font-semibold mb-4">📊 Current Level</h2>
+        <div v-for="level in levels" :key="level.name" class="mb-3">
+          <div class="flex justify-between items-center">
+            <span class="font-medium">{{ level.name }}</span>
+            <span class="text-sm text-gray-500">{{ levelProgress(level).toFixed(0) }}%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+            <div class="h-2 rounded-full" :class="levelProgress(level) >= 100 ? 'bg-green-500' : 'bg-blue-500'" :style="{ width: levelProgress(level) + '%' }"></div>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <h3 class="text-sm text-gray-500">🧭 You are currently at:</h3>
+          <div class="text-lg font-bold text-blue-600">{{ currentLevel }}</div>
+          <div class="text-sm text-gray-600">Next: {{ nextLevel || '🎉 All levels completed!' }}</div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    createApp({
+      data() {
+        const totalDays = 100
+        const today = new Date()
+        const modules = [
+          { name: "Linux Basics (CLI, File, Packages)", level: "Beginner" },
+          { name: "Web Server Setup (Apache, Nginx)", level: "Beginner" },
+          { name: "Basic Server Security (SSH, Firewall)", level: "Beginner" },
+          { name: "Docker & Image Building", level: "Intermediate" },
+          { name: "CI/CD: GitHub Actions / GitLab CI", level: "Intermediate" },
+          { name: "Process Managers: systemd, Supervisor", level: "Intermediate" },
+          { name: "FastAPI (Python Microservices)", level: "Advanced" },
+          { name: "Messaging: RabbitMQ / Kafka (Intro)", level: "Advanced" },
+          { name: "Laravel (Advanced, Events, Queues)", level: "Intermediate" },
+          { name: "Python (Basics)", level: "Beginner" },
+          { name: "Django", level: "Intermediate" },
+          { name: "Go Language & Clean Architecture", level: "Advanced" },
+          { name: "Vue.js", level: "Intermediate" },
+          { name: "Numpy, Pandas, Matplotlib", level: "Intermediate" },
+          { name: "Scikit-learn", level: "Intermediate" },
+          { name: "Deep Learning: TensorFlow / PyTorch", level: "Advanced" },
+          { name: "MongoDB", level: "Intermediate" },
+          { name: "SQL / MySQL", level: "Intermediate" },
+        ]
+        return {
+          roadmap: modules.map((mod, i, all) => {
+            const deadline = new Date(today.getTime() + Math.floor(totalDays / all.length) * i * 86400000)
+            return { ...mod, progress: 0, status: "Not Started", deadline: deadline.toISOString().split('T')[0] }
+          }),
+          levels: [
+            { name: "Beginner" },
+            { name: "Intermediate" },
+            { name: "Advanced" }
+          ]
+        }
+      },
+      computed: {
+        filteredRoadmap() {
+          const allowedLevels = this.levels.slice(0, this.activeLevelIndex + 1).map(l => l.name);
+          return this.roadmap.filter(i => allowedLevels.includes(i.level));
+        },
+        totalProgress() {
+          const total = this.roadmap.reduce((sum, item) => sum + item.progress, 0)
+          return total / this.roadmap.length
+        },
+        currentLevel() {
+          const unlocked = this.levels.find(lvl => this.levelProgress(lvl) < 100)
+          return unlocked ? unlocked.name : "Advanced"
+        },
+        activeLevelIndex() {
+          return this.levels.findIndex(lvl => lvl.name === this.currentLevel)
+        },
+        nextLevel() {
+          const index = this.levels.findIndex(lvl => lvl.name === this.currentLevel)
+          return this.levels[index + 1]?.name || null
+        }
+      },
+      methods: {
+        formatDate(date) {
+          return new Date(date).toLocaleDateString('en-CA')
+        },
+        isOverdue(item) {
+          return new Date(item.deadline) < new Date()
+        },
+        saveData() {
+          const blob = new Blob([JSON.stringify(this.roadmap, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'roadmap-progress.json';
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        loadData(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const data = JSON.parse(e.target.result);
+              this.roadmap = data;
+            } catch (err) {
+              alert("Invalid JSON file.");
+            }
+          };
+          reader.readAsText(file);
+        },
+        levelProgress(level) {
+          const items = this.roadmap.filter(i => i.level === level.name)
+          if (!items.length) return 0
+          const total = items.reduce((sum, i) => sum + i.progress, 0)
+          return total / items.length
+        }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>
